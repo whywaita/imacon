@@ -1,0 +1,42 @@
+name: Convert image
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Get list of target
+        id: list
+        run: |
+          git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | xargs -I{} bash -c "identify {} && echo {} >> target.txt || echo no image"
+
+          echo "::set-output name=line::$(cat target.txt | wc -l)"
+      - name: Convert image
+        run: |
+          mkdir -p ./_converted
+          declare -a size=(16x16 32x32 512x512 1024x1024)
+          declare -a format=(png jpg)
+
+          for file_name in $(cat target.txt);
+          do
+            BASENAME=$(basename ${file_name})
+            for s in ${size[*]};
+            do
+              for f in ${format[*]};
+              do
+                convert -resize $s ${file_name} ./_converted/${BASENAME}@$s.$f
+              done
+            done
+          done
+        if: ${{ steps.list.outputs.line != 0 }}
+      - uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: _converted
+        if: ${{ steps.list.outputs.line != 0 }}
