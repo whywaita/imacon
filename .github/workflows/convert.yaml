@@ -14,7 +14,7 @@ jobs:
       - name: Get list of target
         id: list
         run: |
-          git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | xargs -I{} bash -c "identify {} && echo {} >> target.txt || echo no image"
+          git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | grep -E "^original" | xargs -I{} bash -c "identify {} && echo {} >> target.txt || echo no image"
 
           echo "::set-output name=line::$(cat target.txt | wc -l)"
       - name: Convert image
